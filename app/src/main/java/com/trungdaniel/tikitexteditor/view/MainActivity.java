@@ -1,8 +1,10 @@
-package com.trungdaniel.tikitexteditor;
+package com.trungdaniel.tikitexteditor.view;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+
+import com.trungdaniel.tikitexteditor.R;
 
 public class MainActivity extends AppCompatActivity {
 

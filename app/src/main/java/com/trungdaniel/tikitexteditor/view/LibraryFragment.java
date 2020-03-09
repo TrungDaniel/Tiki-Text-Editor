@@ -26,8 +26,7 @@ import android.widget.Spinner;
 
 import com.trungdaniel.tikitexteditor.R;
 import com.trungdaniel.tikitexteditor.view.adapter.PhotoAdapter;
-import com.trungdaniel.tikitexteditor.view.adapter.SavedAdapter;
-import com.trungdaniel.tikitexteditor.view.model.Spacecraft;
+
 
 import java.io.File;
 import java.util.ArrayList;
@@ -52,7 +51,120 @@ public class LibraryFragment extends Fragment {
         getAllFile(view);
 
 
+
+
+
     }
+
+
+    class ImageFolder {
+        private String path;
+        private String FolderName;
+        private int numberOfPics = 0;
+        private String firstPic;
+
+        public ImageFolder() {
+        }
+
+        public ImageFolder(String path, String folderName) {
+            this.path = path;
+            FolderName = folderName;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public String getFolderName() {
+            return FolderName;
+        }
+
+        public void setFolderName(String folderName) {
+            FolderName = folderName;
+        }
+
+        public int getNumberOfPics() {
+            return numberOfPics;
+        }
+
+        public void setNumberOfPics(int numberOfPics) {
+            this.numberOfPics = numberOfPics;
+        }
+
+        public void addpics() {
+            this.numberOfPics++;
+        }
+
+        public String getFirstPic() {
+            return firstPic;
+        }
+
+        public void setFirstPic(String firstPic) {
+            this.firstPic = firstPic;
+        }
+    }
+
+
+
+    private ArrayList<String> getPicturePaths() {
+        ArrayList<String> listForder= new ArrayList<>();
+        ArrayList<ImageFolder> picFolders = new ArrayList<>();
+        ArrayList<String> picPaths = new ArrayList<>();
+        Uri allImagesuri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        String[] projection = {MediaStore.Images.ImageColumns.DATA, MediaStore.Images.Media.DISPLAY_NAME,
+                MediaStore.Images.Media.BUCKET_DISPLAY_NAME, MediaStore.Images.Media.BUCKET_ID};
+        Cursor cursor = getContext().getContentResolver().query(allImagesuri, projection, null, null, null);
+        try {
+            if (cursor != null) {
+                cursor.moveToFirst();
+            }
+            do {
+                ImageFolder folds = new ImageFolder();
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME));
+                String folder = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME));
+                String datapath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA));
+
+                String folderpaths = datapath.substring(0, datapath.lastIndexOf(folder + "/"));
+                folderpaths = folderpaths + folder + "/";
+                if (!picPaths.contains(folderpaths)) {
+                    picPaths.add(folderpaths);
+                    folds.setPath(folderpaths);
+                    folds.setFolderName(folder);
+                    folds.setFirstPic(datapath);//if the folder has only one picture this line helps to set it as first so as to avoid blank image in itemview
+                    folds.addpics();
+                    picFolders.add(folds);
+                } else {
+                    for (int i = 0; i < picFolders.size(); i++) {
+                        if (picFolders.get(i).getPath().equals(folderpaths)) {
+                            picFolders.get(i).setFirstPic(datapath);
+                            picFolders.get(i).addpics();
+                        }
+                    }
+                }
+            } while (cursor.moveToNext());
+            cursor.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        for (int i = 0; i < picFolders.size(); i++) {
+            Log.d("picture folders", picFolders.get(i).getFolderName() + " and path = " + picFolders.get(i).getPath() + " " + picFolders.get(i).getNumberOfPics());
+        }
+        for (int i=0;i<picFolders.size();i++){
+            listForder.add(picFolders.get(i).getFolderName());
+        }
+        return listForder;
+
+
+
+
+    }
+
+
+
 
     private void getAllImage() {
         Uri uri;
@@ -82,17 +194,21 @@ public class LibraryFragment extends Fragment {
         rvPhoto.setAdapter(photoAdapter);
     }
 
+
     private void getAllFile(View view) {
         spinner = view.findViewById(R.id.sp_file);
         ArrayList<String> arr = new ArrayList<>();
+
         String path = Environment.getExternalStorageDirectory().toString() + "/Pictures";
+
         Log.d("Files", "Path: " + path);
         File directory = new File(path);
         File[] files = directory.listFiles();
-        Log.d("Files", "Size: " + files.length);
+
+        //  Log.d("Files", "Size: " + files.length);
         arr.add("All file");
         for (int i = 0; i < files.length; i++) {
-            arr.add(files[i].getName());
+            arr.add(getPicturePaths().get(i));
         }
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>
@@ -115,13 +231,15 @@ public class LibraryFragment extends Fragment {
                     case 0:
                         getAllImage();
 
-
                 }
 
                 if (spinner.getSelectedItem().toString() != "All file") {
                     try {
+                       /* rvPhoto.setLayoutManager(new GridLayoutManager(getContext(), 3));
+                        rvPhoto.setAdapter(new SavedAdapter(getData(spinner.getSelectedItem().toString()), getContext()));*/
                         rvPhoto.setLayoutManager(new GridLayoutManager(getContext(), 3));
-                        rvPhoto.setAdapter(new SavedAdapter(getData(spinner.getSelectedItem().toString()), getContext()));
+                        rvPhoto.setAdapter(new PhotoAdapter(getAllImagesByFolder(spinner.getSelectedItem().toString()), getContext()));
+
                     } catch (NullPointerException e) {
 
                     }
@@ -138,30 +256,30 @@ public class LibraryFragment extends Fragment {
 
     }
 
-    private ArrayList<Spacecraft> getData(String name) {
+    public ArrayList<String> getAllImagesByFolder(String path) {
+        ArrayList<String> images = new ArrayList<>();
+        Uri allVideosuri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        String[] projection = {MediaStore.Images.ImageColumns.DATA, MediaStore.Images.Media.DISPLAY_NAME,
+                MediaStore.Images.Media.SIZE};
+        Cursor cursor = getContext().getContentResolver().query(allVideosuri, projection, MediaStore.Images.Media.DATA + " like ? ", new String[]{"%" + path + "%"}, null);
+        try {
+            cursor.moveToFirst();
+            do {
+                String pic = new String();
+                pic = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA));
 
-        ArrayList<Spacecraft> spacecrafts = new ArrayList<>();
-        //TARGET FOLDER
-        File downloadsFolder = Environment.getExternalStoragePublicDirectory(name);
-
-        Spacecraft s;
-
-        if (downloadsFolder.exists()) {
-            //GET ALL FILES IN DOWNLOAD FOLDER
-            File[] files = downloadsFolder.listFiles();
-
-            //LOOP THRU THOSE FILES GETTING NAME AND URI
-            for (int i = 0; i < files.length; i++) {
-                File file = files[i];
-
-                s = new Spacecraft();
-                s.setUri(Uri.fromFile(file));
-                spacecrafts.add(s);
+                images.add(pic);
+            } while (cursor.moveToNext());
+            cursor.close();
+            ArrayList<String> reSelection = new ArrayList<>();
+            for (int i = images.size() - 1; i > -1; i--) {
+                reSelection.add(images.get(i));
             }
+            images = reSelection;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-
-        return spacecrafts;
+        return images;
     }
 
 

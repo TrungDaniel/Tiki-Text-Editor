@@ -14,16 +14,14 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Environment;
-import android.provider.MediaStore;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.trungdaniel.tikitexteditor.view.adapter.SavedAdapter;
-import com.trungdaniel.tikitexteditor.view.model.Photo;
 import com.trungdaniel.tikitexteditor.view.model.Spacecraft;
 
 import java.io.File;
@@ -38,6 +36,7 @@ public class SavedFragment extends Fragment {
     private ImageView imgBackSaved;
     private NavController navController;
     private Button btnMorePhoto;
+    private TextView tvNull;
 
     public SavedFragment() {
 
@@ -80,9 +79,11 @@ public class SavedFragment extends Fragment {
 
 
     private void init(View view) {
+        tvNull = view.findViewById(R.id.tv_saved);
         rvSaved = view.findViewById(R.id.rv_saved);
         rvSaved.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        rvSaved.setAdapter(new SavedAdapter(getData(), getContext()));
+        SavedAdapter savedAdapter = new SavedAdapter(getData(), getContext());
+        rvSaved.setAdapter(savedAdapter);
         imgBackSaved = view.findViewById(R.id.img_back_saved);
         navController = Navigation.findNavController(view);
         btnMorePhoto = view.findViewById(R.id.btn_edit_photo);
@@ -98,6 +99,11 @@ public class SavedFragment extends Fragment {
                 navController.navigate(R.id.action_savedFragment_to_homeFragment);
             }
         });
+
+        // check saved is null
+        if (savedAdapter.getItemCount() == 0) {
+            tvNull.setText("You don't have any workart here");
+        }
 
 
     }
